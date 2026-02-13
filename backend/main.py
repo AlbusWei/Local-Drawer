@@ -31,7 +31,7 @@ GENERATED_IMAGES_DIR = BASE_DIR / "generated_images"
 UPLOADS_DIR = BASE_DIR / "uploads"
 HISTORY_FILE = BASE_DIR / "history.json"
 API_KEY = "sk-9a3fa4e2455f413f8a176ac7e85444fd"
-BASE_URL = "https://right.codes/gemini/v1beta/" # Removed 'models/' as SDK usually appends it
+BASE_URL = "https://right.codes/gemini" # SDK appends v1beta/ automatically
 
 # Ensure directories exist
 GENERATED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads
 # Pydantic models
 class GenerateRequest(BaseModel):
     prompt: str
-    model: Optional[str] = "gemini-3-pro-image" # Default model
+    model: Optional[str] = "gemini-3-pro-image-preview" # Default model
 
 class ImageRecord(BaseModel):
     id: str
@@ -84,7 +84,7 @@ async def get_history():
 @app.post("/api/generate", response_model=GenerateResponse)
 async def generate_image(
     prompt: str = Form(...),
-    model: str = Form("gemini-3-pro-image"),
+    model: str = Form("gemini-3-pro-image-preview"),
     image: UploadFile = File(None)
 ):
     try:
@@ -133,7 +133,11 @@ async def generate_image(
         filename = f"generated_{timestamp}.png"
         file_path = os.path.join(GENERATED_IMAGES_DIR, filename)
         
-        image_data = base64.b64decode(generated_image_b64)
+        # The SDK returns bytes for inline_data.data
+        image_data = generated_image_b64
+        if isinstance(image_data, str):
+            image_data = base64.b64decode(image_data)
+            
         with open(file_path, "wb") as f:
             f.write(image_data)
             
