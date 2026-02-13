@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env
+
+# Backend specific
+backend/generated_images/*
+!backend/generated_images/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/history.json
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+.trae/
+
+# Build
+dist/
+build/
