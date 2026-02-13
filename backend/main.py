@@ -23,23 +23,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from pathlib import Path
+
 # Constants
-GENERATED_IMAGES_DIR = "backend/generated_images"
-UPLOADS_DIR = "backend/uploads"
-HISTORY_FILE = "backend/history.json"
+BASE_DIR = Path(__file__).resolve().parent
+GENERATED_IMAGES_DIR = BASE_DIR / "generated_images"
+UPLOADS_DIR = BASE_DIR / "uploads"
+HISTORY_FILE = BASE_DIR / "history.json"
 API_KEY = "sk-9a3fa4e2455f413f8a176ac7e85444fd"
 BASE_URL = "https://right.codes/gemini/v1beta/" # Removed 'models/' as SDK usually appends it
 
 # Ensure directories exist
-os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-if not os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "w") as f:
+GENERATED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+if not HISTORY_FILE.exists():
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump([], f)
 
 # Mount static files
-app.mount("/api/image", StaticFiles(directory=GENERATED_IMAGES_DIR), name="generated_images")
-app.mount("/api/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/api/image", StaticFiles(directory=str(GENERATED_IMAGES_DIR)), name="generated_images")
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 # Pydantic models
 class GenerateRequest(BaseModel):
