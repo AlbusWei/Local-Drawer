@@ -37,3 +37,4 @@ pnpm-lock.yaml
 # Build
 dist/
 build/
+backend/local_drawer.db
