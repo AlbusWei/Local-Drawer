@@ -3,9 +3,10 @@ import { ImageRecord, api } from '../services/api';
 
 interface GalleryProps {
   images: ImageRecord[];
+  onSelect: (image: ImageRecord) => void;
 }
 
-export const Gallery: React.FC<GalleryProps> = ({ images }) => {
+export const Gallery: React.FC<GalleryProps> = ({ images, onSelect }) => {
   if (images.length === 0) {
     return (
       <div className="text-center py-12 text-zinc-500">
@@ -17,7 +18,11 @@ export const Gallery: React.FC<GalleryProps> = ({ images }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {images.map((image) => (
-        <div key={image.id} className="group relative aspect-square bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
+        <div 
+          key={image.id} 
+          className="group relative aspect-square bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 cursor-pointer"
+          onClick={() => onSelect(image)}
+        >
           <img
             src={api.getImageUrl(image.image_url)}
             alt={image.prompt}

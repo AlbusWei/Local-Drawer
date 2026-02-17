@@ -19,20 +19,22 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Install Python dependencies if needed
+REM Create virtual environment if it doesn't exist
 if not exist "backend\venv" (
     echo Creating Python virtual environment...
     python -m venv backend\venv
-    call backend\venv\Scripts\activate.bat
-    echo Installing Python dependencies...
-    pip install -r backend\requirements.txt
-) else (
-    call backend\venv\Scripts\activate.bat
 )
+
+REM Always install/update dependencies to ensure they are current
+call backend\venv\Scripts\activate.bat
+echo Installing/Updating Python dependencies...
+pip install -r backend\requirements.txt
 
 REM Start Backend
 echo Starting Backend Server...
-start "Backend Server" cmd /k "call backend\venv\Scripts\activate.bat && python backend\main.py"
+cd backend
+start "Backend Server" cmd /k "call venv\Scripts\activate.bat && python main.py"
+cd ..
 
 REM Install Frontend dependencies if needed
 if not exist "frontend\node_modules" (
