@@ -21,11 +21,15 @@ class ImageTask(Base):
     # Result
     image_url = Column(String, nullable=True)
     local_path = Column(String, nullable=True)
+    image_urls = Column(JSON, nullable=True)
+    local_paths = Column(JSON, nullable=True)
     
     # Configuration
-    model = Column(String, default="gemini-3-pro-image-preview")
+    model = Column(String, default="gemini-3.1-flash-image-preview")
     aspect_ratio = Column(String, default="1:1")
     resolution = Column(String, default="1K")
+    params = Column(JSON, nullable=True)
+    provider_task_id = Column(String, nullable=True)
     
     # Relationships
     reference_images = relationship("ReferenceImage", secondary=task_images, back_populates="tasks")

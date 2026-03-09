@@ -25,25 +25,51 @@ export interface Task {
   task_id: string;
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   prompt: string;
+  model: string;
   image_url?: string;
+  image_urls?: string[] | null;
   created_at: string;
   error_msg?: string;
   aspect_ratio: string;
   resolution: string;
+  params?: Record<string, unknown> | null;
   reference_images: ReferenceImage[];
 }
 
 export interface GenerateOptions {
+  model?: string;
   aspectRatio?: string;
   resolution?: string;
+  webSearch?: boolean;
+  seedream?: {
+    size?: string;
+    quality?: string;
+    n?: number;
+    promptPriority?: string;
+    outputFormat?: string;
+    responseFormat?: string;
+    webSearch?: boolean;
+  };
 }
 
 export const api = {
   async generateImage(prompt: string, images: File[] = [], options: GenerateOptions = {}): Promise<Task> {
     const formData = new FormData();
     formData.append('prompt', prompt);
+    formData.append('model', options.model || 'gemini-3.1-flash-image-preview');
     formData.append('aspect_ratio', options.aspectRatio || "1:1");
     formData.append('resolution', options.resolution || "1K");
+    if (options.webSearch) formData.append('web_search', 'true');
+
+    if (options.seedream) {
+      if (options.seedream.size) formData.append('size', options.seedream.size);
+      if (options.seedream.quality) formData.append('quality', options.seedream.quality);
+      if (typeof options.seedream.n === 'number') formData.append('n', String(options.seedream.n));
+      if (options.seedream.promptPriority) formData.append('prompt_priority', options.seedream.promptPriority);
+      if (options.seedream.outputFormat) formData.append('output_format', options.seedream.outputFormat);
+      if (options.seedream.responseFormat) formData.append('response_format', options.seedream.responseFormat);
+      if (options.seedream.webSearch) formData.append('web_search', 'true');
+    }
     
     if (images.length > 0) {
       images.forEach((image) => {
@@ -75,16 +101,22 @@ export const api = {
   async getHistory(): Promise<ImageRecord[]> {
       const tasks = await this.getTasks(50, 0);
       return tasks
-        .filter(t => t.status === 'COMPLETED' && t.image_url)
-        .map(t => ({
-            id: t.task_id,
-            image_url: t.image_url!,
+        .filter(t => t.status === 'COMPLETED' && (t.image_urls?.length || t.image_url))
+        .flatMap((t) => {
+          const urls = (t.image_urls && t.image_urls.length > 0)
+            ? t.image_urls
+            : (t.image_url ? [t.image_url] : []);
+
+          return urls.map((url, idx) => ({
+            id: `${t.task_id}:${idx + 1}`,
+            image_url: url,
             prompt: t.prompt,
             created_at: t.created_at,
             aspect_ratio: t.aspect_ratio,
             resolution: t.resolution,
             reference_images: t.reference_images.map(r => r.url)
-        }));
+          }));
+        });
   },
 
   async cancelTask(taskId: string): Promise<void> {

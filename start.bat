@@ -3,6 +3,13 @@ setlocal
 
 echo Starting Nano Banana Pro Local...
 
+if "%EVOLINK_API_KEY%"=="" (
+    echo Warning: EVOLINK_API_KEY is not set. Seedream 5.0 Lite will not work.
+)
+if "%GEMINI_API_KEY%"=="" (
+    echo Warning: GEMINI_API_KEY is not set. Nano Banana Pro will not work.
+)
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if %errorlevel% neq 0 (

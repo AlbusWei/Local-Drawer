@@ -5,13 +5,19 @@ interface AdvancedSettingsProps {
   onAspectRatioChange: (ratio: string) => void;
   resolution: string;
   onResolutionChange: (resolution: string) => void;
+  showWebSearch?: boolean;
+  webSearch?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
 }
 
 export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({ 
   aspectRatio, 
   onAspectRatioChange,
   resolution,
-  onResolutionChange
+  onResolutionChange,
+  showWebSearch = false,
+  webSearch = false,
+  onWebSearchChange
 }) => {
   const ratios = ["1:1", "16:9", "4:3", "3:4", "9:16"];
   const resolutions = ["1K", "2K", "4K"];
@@ -55,6 +61,18 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
           ))}
         </div>
       </div>
+
+      {showWebSearch && (
+        <label className="flex items-center gap-2 text-sm text-zinc-300 select-none">
+          <input
+            type="checkbox"
+            checked={webSearch}
+            onChange={(e) => onWebSearchChange?.(e.target.checked)}
+            className="h-4 w-4 accent-yellow-500"
+          />
+          Web Search
+        </label>
+      )}
     </div>
   );
 };

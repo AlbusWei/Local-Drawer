@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, api } from '../services/api';
+import { Task, api, GenerateOptions } from '../services/api';
 
 interface TaskState {
   tasks: Task[];
@@ -8,7 +8,7 @@ interface TaskState {
   hasMore: boolean;
   fetchTasks: () => Promise<void>;
   loadMoreTasks: () => Promise<void>;
-  addTask: (prompt: string, images: File[], options: { aspectRatio: string; resolution: string }) => Promise<void>;
+  addTask: (prompt: string, images: File[], options: GenerateOptions) => Promise<void>;
   cancelTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   pollTasks: () => void;

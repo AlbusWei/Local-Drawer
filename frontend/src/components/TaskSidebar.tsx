@@ -81,7 +81,9 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({ onRestore, className }
                   <Clock size={12} />
                   <span>{new Date(task.created_at).toLocaleTimeString()}</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-                    {task.resolution}
+                    {task.model?.toLowerCase().includes('seedream')
+                      ? String((task.params as any)?.size || 'auto')
+                      : task.resolution}
                   </span>
                 </div>
               </div>

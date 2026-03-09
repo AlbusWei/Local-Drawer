@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MultiImageUpload } from './components/MultiImageUpload';
 import { Gallery } from './components/Gallery';
 import { AdvancedSettings } from './components/AdvancedSettings';
+import { SeedreamSettings, SeedreamParams } from './components/SeedreamSettings';
 import { ImageDetailModal } from './components/ImageDetailModal';
 import { TaskSidebar } from './components/TaskSidebar';
 import { api, ImageRecord, Task } from './services/api';
@@ -9,14 +10,37 @@ import { Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useTaskStore } from './stores/taskStore';
 
 function App() {
+  const SEEDREAM_MODEL = 'doubao-seedream-5.0-lite';
+  const NANOBANANA2_MODEL = 'gemini-3.1-flash-image-preview';
+  const NANOBANANA_PRO_MODEL = 'gemini-3-pro-image-preview';
+
+  const modelOptions = [
+    { value: NANOBANANA2_MODEL, label: 'Nano Banana 2' },
+    { value: NANOBANANA_PRO_MODEL, label: 'Nano Banana Pro' },
+    { value: SEEDREAM_MODEL, label: 'Seedream 5.0 Lite' },
+  ];
+
   const [prompt, setPrompt] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [model, setModel] = useState(NANOBANANA2_MODEL);
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [resolution, setResolution] = useState('1K');
+  const [geminiWebSearch, setGeminiWebSearch] = useState(false);
+  const [seedreamParams, setSeedreamParams] = useState<SeedreamParams>({
+    size: 'auto',
+    quality: '2K',
+    n: 1,
+    promptPriority: 'standard',
+    outputFormat: 'jpeg',
+    responseFormat: 'url',
+    webSearch: false,
+  });
   const [history, setHistory] = useState<ImageRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<ImageRecord | null>(null);
   
   const { addTask, isLoading } = useTaskStore();
+  const isSeedreamModel = model === SEEDREAM_MODEL;
+  const isNanoBanana2Model = model === NANOBANANA2_MODEL;
 
   useEffect(() => {
     // Adapter to fetch completed tasks for the gallery
@@ -29,16 +53,22 @@ function App() {
     try {
       const tasks = await api.getTasks(50, 0);
       const completedTasks: ImageRecord[] = tasks
-        .filter(t => t.status === 'COMPLETED' && t.image_url)
-        .map(t => ({
-            id: t.task_id,
-            image_url: t.image_url!,
+        .filter(t => t.status === 'COMPLETED' && (t.image_urls?.length || t.image_url))
+        .flatMap((t) => {
+          const urls = (t.image_urls && t.image_urls.length > 0)
+            ? t.image_urls
+            : (t.image_url ? [t.image_url] : []);
+
+          return urls.map((url, idx) => ({
+            id: `${t.task_id}:${idx + 1}`,
+            image_url: url,
             prompt: t.prompt,
             created_at: t.created_at,
             aspect_ratio: t.aspect_ratio,
             resolution: t.resolution,
             reference_images: t.reference_images.map(r => r.url)
-        }));
+          }));
+        });
       setHistory(completedTasks);
     } catch (error) {
       console.error('Failed to load history:', error);
@@ -49,7 +79,27 @@ function App() {
     if (!prompt.trim()) return;
 
     try {
-      await addTask(prompt, selectedImages, { aspectRatio, resolution });
+      if (isSeedreamModel) {
+        await addTask(prompt, selectedImages, {
+          model,
+          seedream: {
+            size: seedreamParams.size,
+            quality: seedreamParams.quality,
+            n: seedreamParams.n,
+            promptPriority: seedreamParams.promptPriority,
+            outputFormat: seedreamParams.outputFormat,
+            responseFormat: seedreamParams.responseFormat,
+            webSearch: seedreamParams.webSearch,
+          }
+        });
+      } else {
+        await addTask(prompt, selectedImages, {
+          model,
+          aspectRatio,
+          resolution,
+          webSearch: isNanoBanana2Model ? geminiWebSearch : false,
+        });
+      }
       setPrompt('');
       setSelectedImages([]);
       // Optional: Don't reset settings to allow repeated generation
@@ -61,8 +111,26 @@ function App() {
 
   const handleRestore = async (task: Task) => {
     setPrompt(task.prompt);
-    setAspectRatio(task.aspect_ratio);
-    setResolution(task.resolution);
+    const restoredModel = task.model || NANOBANANA2_MODEL;
+    setModel(restoredModel);
+    if (restoredModel === SEEDREAM_MODEL) {
+      const p = (task.params || {}) as Record<string, unknown>;
+      setSeedreamParams({
+        size: typeof p.size === 'string' ? p.size : 'auto',
+        quality: typeof p.quality === 'string' ? p.quality : '2K',
+        n: typeof p.n === 'number' ? p.n : 1,
+        promptPriority: typeof p.prompt_priority === 'string' ? p.prompt_priority : 'standard',
+        outputFormat: typeof p.output_format === 'string' ? p.output_format : 'jpeg',
+        responseFormat: typeof p.response_format === 'string' ? p.response_format : 'url',
+        webSearch: p.web_search === true,
+      });
+      setGeminiWebSearch(false);
+    } else {
+      setAspectRatio(task.aspect_ratio);
+      setResolution(task.resolution);
+      const p = (task.params || {}) as Record<string, unknown>;
+      setGeminiWebSearch(restoredModel === NANOBANANA2_MODEL && p.web_search === true);
+    }
     
     // Restore Reference Images
     if (task.reference_images && task.reference_images.length > 0) {
@@ -97,9 +165,20 @@ function App() {
             <div className="p-2 bg-yellow-500/10 rounded-lg">
               <Sparkles className="w-6 h-6 text-yellow-500" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
-              Nano Banana Pro
-            </h1>
+            <div className="flex items-center justify-between gap-4 w-full">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                {modelOptions.find(o => o.value === model)?.label || 'Image Generator'}
+              </h1>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"
+              >
+                {modelOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -132,12 +211,24 @@ function App() {
                   />
                 </div>
 
-                <AdvancedSettings 
-                  aspectRatio={aspectRatio}
-                  onAspectRatioChange={setAspectRatio}
-                  resolution={resolution}
-                  onResolutionChange={setResolution}
-                />
+                {!isSeedreamModel && (
+                  <AdvancedSettings 
+                    aspectRatio={aspectRatio}
+                    onAspectRatioChange={setAspectRatio}
+                    resolution={resolution}
+                    onResolutionChange={setResolution}
+                    showWebSearch={isNanoBanana2Model}
+                    webSearch={geminiWebSearch}
+                    onWebSearchChange={setGeminiWebSearch}
+                  />
+                )}
+
+                {isSeedreamModel && (
+                  <SeedreamSettings
+                    params={seedreamParams}
+                    onChange={setSeedreamParams}
+                  />
+                )}
 
                 <button
                   onClick={handleGenerate}

@@ -42,9 +42,16 @@ async def startup_event():
 async def generate_image(
     background_tasks: BackgroundTasks,
     prompt: str = Form(...),
-    model: str = Form("gemini-3-pro-image-preview"),
+    model: str = Form("gemini-3.1-flash-image-preview"),
     aspect_ratio: str = Form("1:1"),
     resolution: str = Form("1K"),
+    size: Optional[str] = Form(None),
+    quality: Optional[str] = Form(None),
+    n: Optional[int] = Form(None),
+    prompt_priority: Optional[str] = Form(None),
+    output_format: Optional[str] = Form(None),
+    response_format: Optional[str] = Form(None),
+    web_search: Optional[bool] = Form(False),
     images: List[UploadFile] = File(default=[]),
     db: AsyncSession = Depends(get_db)
 ):
@@ -57,12 +64,28 @@ async def generate_image(
     
     # 2. Create Task Record
     task_id = str(uuid.uuid4())
+    params = {}
+    if size is not None:
+        params["size"] = size
+    if quality is not None:
+        params["quality"] = quality
+    if n is not None:
+        params["n"] = n
+    if prompt_priority is not None:
+        params["prompt_priority"] = prompt_priority
+    if output_format is not None:
+        params["output_format"] = output_format
+    if response_format is not None:
+        params["response_format"] = response_format
+    if web_search:
+        params["web_search"] = True
     new_task = models.ImageTask(
         task_id=task_id,
         prompt=prompt,
         model=model,
         aspect_ratio=aspect_ratio,
         resolution=resolution,
+        params=params or None,
         status="PENDING",
         reference_images=reference_images
     )
